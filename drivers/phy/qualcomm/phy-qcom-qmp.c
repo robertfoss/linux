@@ -1023,6 +1023,9 @@ struct qmp_phy_cfg {
 
 	/* true, if PCS block has no separate SW_RESET register */
 	bool no_pcs_sw_reset;
+
+	/* true if sw reset needs to be invoked */
+	bool has_sw_reset;
 };
 
 /**
@@ -1391,6 +1394,7 @@ static const struct qmp_phy_cfg sm8150_ufsphy_cfg = {
 
 	.is_dual_lane_phy	= true,
 	.no_pcs_sw_reset	= true,
+	.has_sw_reset		= true,
 };
 
 static void qcom_qmp_phy_configure(void __iomem *base,
@@ -1474,6 +1478,9 @@ static int qcom_qmp_phy_com_init(struct qmp_phy *qphy)
 			     SW_DPPHY_RESET_MUX | SW_DPPHY_RESET |
 			     SW_USB3PHY_RESET_MUX | SW_USB3PHY_RESET);
 	}
+
+	if (cfg->has_sw_reset)
+		qphy_setbits(serdes, cfg->regs[QPHY_SW_RESET], SW_RESET);
 
 	if (cfg->has_phy_com_ctrl)
 		qphy_setbits(serdes, cfg->regs[QPHY_COM_POWER_DOWN_CONTROL],
@@ -1650,6 +1657,9 @@ static int qcom_qmp_phy_enable(struct phy *phy)
 
 	if (cfg->has_phy_dp_com_ctrl)
 		qphy_clrbits(dp_com, QPHY_V3_DP_COM_SW_RESET, SW_RESET);
+
+	if (cfg->has_sw_reset)
+		qphy_clrbits(pcs, cfg->regs[QPHY_SW_RESET], SW_RESET);
 
 	/* start SerDes and Phy-Coding-Sublayer */
 	qphy_setbits(pcs, cfg->regs[QPHY_START_CTRL], cfg->start_ctrl);
