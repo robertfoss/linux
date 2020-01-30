@@ -5,6 +5,7 @@
  * Copyright (c) 2017-2018, The Linux Foundation. All rights reserved.
  * Copyright (c) 2017-2018, Linaro Ltd.
  */
+#define DEBUG 1
 
 #include <linux/bitops.h>
 #include <linux/clk.h>
@@ -1258,6 +1259,8 @@ static int ov7251_probe(struct i2c_client *client)
 	struct ov7251 *ov7251;
 	u8 chip_id_high, chip_id_low, chip_rev;
 	int ret;
+
+	dev_err(dev, "%s()\n", __func__);
 
 	ov7251 = devm_kzalloc(dev, sizeof(struct ov7251), GFP_KERNEL);
 	if (!ov7251)

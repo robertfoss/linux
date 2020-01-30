@@ -671,6 +671,34 @@
 };
 
 &tlmm {
+	camera_main_default: camera_main_default {
+		/* MCLK0 */
+		mux {
+			pins = "gpio13";
+			function = "cam_mclk";
+		};
+
+		config {
+			pins = "gpio13";
+			bias-disable; /* No PULL */
+			drive-strength = <2>; /* 2 MA */
+		};
+	};
+
+	camera_tracking_default: camera_tracking_default {
+		/* MCLK3 */
+		mux {
+			pins = "gpio16";
+			function = "cam_mclk";
+		};
+
+		config {
+			pins = "gpio16";
+			bias-disable; /* No PULL */
+			drive-strength = <2>; /* 2 MA */
+		};
+	};
+
 	lt9611_irq_pin: lt9611-irq {
 		pins = "gpio84";
 		function = "gpio";
@@ -888,4 +916,71 @@
 
 &cci {
 	status = "ok";
+
+	i2c-bus@0 {
+		camera_main@10 {
+			compatible = "ovti,ov8856";
+
+			// I2C address of camera as per linux documentation
+			reg = <0x10>;
+
+			// CAM0_RST_N
+			enable-gpios = <&tlmm 9 GPIO_ACTIVE_HIGH>;
+//			reset-gpios = <&tlmm 9 GPIO_ACTIVE_LOW>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&camera_main_default>;
+
+			clocks = <&clock_camcc CAM_CC_MCLK0_CLK>;
+			clock-names = "xclk";
+			clock-frequency = <19200000>;
+
+			vdddo-supply = <&camera_vdddo_1v8>;
+			vdda-supply = <&camera_vdda_2v8>;
+			vddd-supply = <&camera_vddd_1v2>;
+
+			/* No camera mezzanine by default */
+			status = "ok";
+
+			port {
+				ov8856_ep: endpoint {
+					clock-lanes = <1>;
+					data-lanes = <0 4>;
+//					remote-endpoint = <&csiphy0_ep>;
+				};
+			};
+		};
+	};
+	i2c-bus@1 {
+		camera_tracking@c0 {
+			compatible = "ovti,ov7251";
+
+			// I2C address/SCCB-id of camera as per datasheet
+			reg = <0xC0>;
+
+			// XSHUTDOWN/STBY is connected to CAM3_RST_N
+			enable-gpios = <&tlmm 21 GPIO_ACTIVE_HIGH>;
+//			reset-gpios = <&tlmm 21 GPIO_ACTIVE_LOW>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&camera_tracking_default>;
+
+			clocks = <&clock_camcc CAM_CC_MCLK3_CLK>;
+			clock-names = "xclk";
+			clock-frequency = <24000000>;
+
+			vdddo-supply = <&camera_vdddo_1v8>;
+			vdda-supply = <&camera_vdda_2v8>;
+			vddd-supply = <&camera_vddd_1v2>;
+
+			/* No camera mezzanine by default */
+			status = "ok";
+
+			port {
+				ov7251_ep: endpoint {
+					clock-lanes = <1>;
+					data-lanes = <0 1>;
+//					remote-endpoint = <&csiphy3_ep>;
+				};
+			};
+		};
+	};
 };

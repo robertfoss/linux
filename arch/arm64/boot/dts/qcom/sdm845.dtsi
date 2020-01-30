@@ -3216,6 +3216,30 @@
 			#reset-cells = <1>;
 		};
 
+		camera_vdddo_1v8: fixedregulator@0 {
+			compatible = "regulator-fixed";
+			regulator-name = "camera_vdddo";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
+
+		camera_vdda_2v8: fixedregulator@1 {
+			compatible = "regulator-fixed";
+			regulator-name = "camera_vdda";
+			regulator-min-microvolt = <2800000>;
+			regulator-max-microvolt = <2800000>;
+			regulator-always-on;
+		};
+
+		camera_vddd_1v2: fixedregulator@2 {
+			compatible = "regulator-fixed";
+			regulator-name = "camera_vddd";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			regulator-always-on;
+		};
+
 		cci0_default: cci0_default {
 			pinmux {
 				function = "cci_i2c";
@@ -3254,6 +3278,13 @@
 
 			i2c-bus@0 {
 				reg = <0>;
+				clock-frequency = <37500000>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+			};
+
+			i2c-bus@1 {
+				reg = <1>;
 				clock-frequency = <37500000>;
 				#address-cells = <1>;
 				#size-cells = <0>;
