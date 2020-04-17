@@ -2061,7 +2061,7 @@
 			};
 		};
 
-		adsp_pil: remoteproc@9300000 {
+		adsp: remoteproc@9300000 {
 			compatible = "qcom,msm8996-adsp-pil";
 			reg = <0x09300000 0x80000>;
 

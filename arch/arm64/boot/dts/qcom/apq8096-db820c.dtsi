@@ -908,6 +908,11 @@
 	status = "okay";
 };
 
+&adsp {
+	status = "okay";
+	firmware-name = "qcom/msm8996/adsp.mdt";
+};
+
 &q6asmdai {
 	dai@0 {
 		reg = <0>;
