@@ -427,11 +427,11 @@ static int cci_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 {
 	struct cci_master *cci_master = i2c_get_adapdata(adap);
 	struct cci *cci = cci_master->cci;
-	int i, ret;
+	int i, ret = 0;
 
-	ret = pm_runtime_get_sync(cci->dev);
-	if (ret < 0)
-		goto err;
+	//ret = pm_runtime_get_sync(cci->dev);
+	//if (ret < 0)
+	//	goto err;
 
 	for (i = 0; i < num; i++) {
 		if (msgs[i].flags & I2C_M_RD)
@@ -450,9 +450,9 @@ static int cci_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[], int num)
 	if (!ret)
 		ret = num;
 
-err:
-	pm_runtime_mark_last_busy(cci->dev);
-	pm_runtime_put_autosuspend(cci->dev);
+//err:
+	//pm_runtime_mark_last_busy(cci->dev);
+	//pm_runtime_put_autosuspend(cci->dev);
 
 	return ret;
 }
@@ -500,8 +500,8 @@ static int __maybe_unused cci_resume_runtime(struct device *dev)
 
 static int __maybe_unused cci_suspend(struct device *dev)
 {
-	if (!pm_runtime_suspended(dev))
-		return cci_suspend_runtime(dev);
+	//if (!pm_runtime_suspended(dev))
+	//	return cci_suspend_runtime(dev);
 
 	return 0;
 }
@@ -509,16 +509,16 @@ static int __maybe_unused cci_suspend(struct device *dev)
 static int __maybe_unused cci_resume(struct device *dev)
 {
 	cci_resume_runtime(dev);
-	pm_runtime_mark_last_busy(dev);
-	pm_request_autosuspend(dev);
+	//pm_runtime_mark_last_busy(dev);
+	//pm_request_autosuspend(dev);
 
 	return 0;
 }
 
-static const struct dev_pm_ops qcom_cci_pm = {
-	SET_SYSTEM_SLEEP_PM_OPS(cci_suspend, cci_resume)
-	SET_RUNTIME_PM_OPS(cci_suspend_runtime, cci_resume_runtime, NULL)
-};
+//static const struct dev_pm_ops qcom_cci_pm = {
+//	SET_SYSTEM_SLEEP_PM_OPS(cci_suspend, cci_resume)
+//	SET_RUNTIME_PM_OPS(cci_suspend_runtime, cci_resume_runtime, NULL)
+//};
 
 static int cci_probe(struct platform_device *pdev)
 {
@@ -649,10 +649,10 @@ static int cci_probe(struct platform_device *pdev)
 			goto error_i2c;
 	}
 
-	pm_runtime_set_autosuspend_delay(dev, MSEC_PER_SEC);
-	pm_runtime_use_autosuspend(dev);
-	pm_runtime_set_active(dev);
-	pm_runtime_enable(dev);
+	//pm_runtime_set_autosuspend_delay(dev, MSEC_PER_SEC);
+	//pm_runtime_use_autosuspend(dev);
+	//pm_runtime_set_active(dev);
+	//pm_runtime_enable(dev);
 
 	return 0;
 
@@ -681,8 +681,8 @@ static int cci_remove(struct platform_device *pdev)
 	}
 
 	disable_irq(cci->irq);
-	pm_runtime_disable(&pdev->dev);
-	pm_runtime_set_suspended(&pdev->dev);
+	//pm_runtime_disable(&pdev->dev);
+	//pm_runtime_set_suspended(&pdev->dev);
 
 	return 0;
 }
@@ -781,7 +781,7 @@ static struct platform_driver qcom_cci_driver = {
 	.driver = {
 		.name = "i2c-qcom-cci",
 		.of_match_table = cci_dt_match,
-		.pm = &qcom_cci_pm,
+		// .pm = &qcom_cci_pm,
 	},
 };
 
