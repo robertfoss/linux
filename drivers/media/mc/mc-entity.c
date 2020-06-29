@@ -8,6 +8,8 @@
  *	     Sakari Ailus <sakari.ailus@iki.fi>
  */
 
+#define DEBUG 1
+
 #include <linux/bitmap.h>
 #include <linux/property.h>
 #include <linux/slab.h>
@@ -413,10 +415,14 @@ __must_check int __media_pipeline_start(struct media_entity *entity,
 	struct media_link *link;
 	int ret;
 
+	printk("%s 1\n", __func__);
+
 	if (!pipe->streaming_count++) {
 		ret = media_graph_walk_init(&pipe->graph, mdev);
-		if (ret)
+		if (ret) {
+			printk("%s media_graph_walk_init failed\n", __func__);
 			goto error_graph_walk_start;
+		}
 	}
 
 	media_graph_walk_start(&pipe->graph, entity);
@@ -428,6 +434,8 @@ __must_check int __media_pipeline_start(struct media_entity *entity,
 		entity->stream_count++;
 
 		if (entity->pipe && entity->pipe != pipe) {
+			printk("%s failed - pipe active for %s. Can't start for %s\n", __func__, entity->name,
+			entity_err->name);
 			pr_err("Pipe active for %s. Can't start for %s\n",
 				entity->name,
 				entity_err->name);
@@ -438,8 +446,9 @@ __must_check int __media_pipeline_start(struct media_entity *entity,
 		entity->pipe = pipe;
 
 		/* Already streaming --- no need to check. */
-		if (entity->stream_count > 1)
+		if (entity->stream_count > 1) {
 			continue;
+		}
 
 		if (!entity->ops || !entity->ops->link_validate)
 			continue;
@@ -473,6 +482,7 @@ __must_check int __media_pipeline_start(struct media_entity *entity,
 
 			ret = entity->ops->link_validate(link);
 			if (ret < 0 && ret != -ENOIOCTLCMD) {
+				printk("%s entity->ops->link_validate failed, ret=%d\n", __func__, ret);
 				dev_dbg(entity->graph_obj.mdev->dev,
 					"link validation failed for '%s':%u -> '%s':%u, error %d\n",
 					link->source->entity->name,
@@ -486,6 +496,7 @@ __must_check int __media_pipeline_start(struct media_entity *entity,
 		bitmap_or(active, active, has_no_links, entity->num_pads);
 
 		if (!bitmap_full(active, entity->num_pads)) {
+			printk("%s !bitmap_full(active, entity->num_pads)\n", __func__);
 			ret = -ENOLINK;
 			dev_dbg(entity->graph_obj.mdev->dev,
 				"'%s':%u must be connected by an enabled link\n",
@@ -662,52 +673,82 @@ media_create_pad_link(struct media_entity *source, u16 source_pad,
 	struct media_link *link;
 	struct media_link *backlink;
 
-	if (WARN_ON(!source || !sink) ||
-	    WARN_ON(source_pad >= source->num_pads) ||
-	    WARN_ON(sink_pad >= sink->num_pads))
+	printk("%s 1\n", __func__);
+
+	if (WARN_ON(!source || !sink)) {
+		printk("%s !source || !sink\n", __func__);
 		return -EINVAL;
-	if (WARN_ON(!(source->pads[source_pad].flags & MEDIA_PAD_FL_SOURCE)))
+	}
+	printk("%s 1.1\n", __func__);
+
+	if (WARN_ON(source_pad >= source->num_pads)) {
+		printk("%s source_pad >= source->num_pads\n", __func__);
 		return -EINVAL;
-	if (WARN_ON(!(sink->pads[sink_pad].flags & MEDIA_PAD_FL_SINK)))
+	}
+	printk("%s 1.2 sink=%p\n", __func__, sink);
+	if (WARN_ON(sink_pad >= sink->num_pads)) {
+		printk("%s sink_pad >= sink->num_pads, %u >= %u\n", __func__, sink_pad, sink->num_pads);
+		printk("%s \"%s\" -> \"%s\"\n", __func__, source->name, sink->name);
 		return -EINVAL;
+	}
+	printk("%s 1.3\n", __func__);
+	if (WARN_ON(!(source->pads[source_pad].flags & MEDIA_PAD_FL_SOURCE))) {
+		printk("%s !(source->pads[source_pad].flags & MEDIA_PAD_FL_SOURCE))\n", __func__);
+		return -EINVAL;
+	}
+	printk("%s 1.4\n", __func__);
+	if (WARN_ON(!(sink->pads[sink_pad].flags & MEDIA_PAD_FL_SINK))) {
+		printk("%s !(sink->pads[sink_pad].flags & MEDIA_PAD_FL_SINK))\n", __func__);
+		return -EINVAL;
+	}
+
+printk("%s 2\n", __func__);
 
 	link = media_add_link(&source->links);
-	if (link == NULL)
+	if (link == NULL) {
+		printk("%s link = media_add_link(&source->links) failed\n", __func__);
 		return -ENOMEM;
+	}
 
+printk("%s 3\n", __func__);
 	link->source = &source->pads[source_pad];
 	link->sink = &sink->pads[sink_pad];
 	link->flags = flags & ~MEDIA_LNK_FL_INTERFACE_LINK;
+
+printk("%s 4\n", __func__);
 
 	/* Initialize graph object embedded at the new link */
 	media_gobj_create(source->graph_obj.mdev, MEDIA_GRAPH_LINK,
 			&link->graph_obj);
 
+
+printk("%s 5\n", __func__);
 	/* Create the backlink. Backlinks are used to help graph traversal and
 	 * are not reported to userspace.
 	 */
 	backlink = media_add_link(&sink->links);
 	if (backlink == NULL) {
 		__media_entity_remove_link(source, link);
+		printk("%s backlink = media_add_link(&sink->links) failed\n", __func__);
 		return -ENOMEM;
 	}
-
+printk("%s 6\n", __func__);
 	backlink->source = &source->pads[source_pad];
 	backlink->sink = &sink->pads[sink_pad];
 	backlink->flags = flags;
 	backlink->is_backlink = true;
-
+printk("%s 7\n", __func__);
 	/* Initialize graph object embedded at the new link */
 	media_gobj_create(sink->graph_obj.mdev, MEDIA_GRAPH_LINK,
 			&backlink->graph_obj);
-
+printk("%s 8\n", __func__);
 	link->reverse = backlink;
 	backlink->reverse = link;
-
+printk("%s 9\n", __func__);
 	sink->num_backlinks++;
 	sink->num_links++;
 	source->num_links++;
-
+printk("%s done\n", __func__);
 	return 0;
 }
 EXPORT_SYMBOL_GPL(media_create_pad_link);
