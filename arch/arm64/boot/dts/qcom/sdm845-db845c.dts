@@ -1212,13 +1212,12 @@
 		vdddo-supply = <&vreg_lvs1a_1p8>;
 		vdda-supply = <&cam3_avdd_2v8>;
 
-		status = "disable";
+		status = "disabled";
 
 		port {
 			ov7251_ep: endpoint {
 				clock-lanes = <1>;
-				data-lanes = <0 1>;
-//				remote-endpoint = <&csiphy3_ep>;
+				data-lanes = <1 2>;
 			};
 		};
 	};
