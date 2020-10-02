@@ -964,18 +964,6 @@ static const struct ov8856_link_freq_config link_freq_configs[] = {
 
 static const struct ov8856_mode supported_modes[] = {
 	{
-		.width = 3280,
-		.height = 2464,
-		.hts = 1928,
-		.vts_def = 2488,
-		.vts_min = 2488,
-		.reg_list = {
-			.num_of_regs = ARRAY_SIZE(mode_3280x2464_regs),
-			.regs = mode_3280x2464_regs,
-		},
-		.link_freq_index = OV8856_LINK_FREQ_720MBPS,
-	},
-	{
 		.width = 3264,
 		.height = 2448,
 		.hts = 1932,
