@@ -594,7 +594,8 @@ int camss_get_pixel_clock(struct media_entity *entity, u32 *pixel_clock)
 
 int camss_pm_domain_on(struct camss *camss, int id)
 {
-	if (camss->version == CAMSS_8x96) {
+	if (camss->version == CAMSS_8x96 ||
+	    camss->version == CAMSS_SDM845) {
 		camss->genpd_link[id] = device_link_add(camss->dev,
 				camss->genpd[id], DL_FLAG_STATELESS |
 				DL_FLAG_PM_RUNTIME | DL_FLAG_RPM_ACTIVE);
@@ -608,7 +609,8 @@ int camss_pm_domain_on(struct camss *camss, int id)
 
 void camss_pm_domain_off(struct camss *camss, int id)
 {
-	if (camss->version == CAMSS_8x96)
+	if (camss->version == CAMSS_8x96 ||
+	    camss->version == CAMSS_SDM845)
 		device_link_del(camss->genpd_link[id]);
 }
 
@@ -730,6 +732,12 @@ static int camss_init_subdevices(struct camss *camss)
 		csid_res = csid_res_8x96;
 		ispif_res = &ispif_res_8x96;
 		vfe_res = vfe_res_8x96;
+	}  else if (camss->version == CAMSS_SDM845) {
+		csiphy_res = csiphy_res_sdm845;
+		csid_res = csid_res_sdm845;
+		/* Titan IFEs don't have an ISPIF  */
+		ispif_res = NULL;
+		vfe_res = vfe_res_sdm845;
 	} else {
 		return -EINVAL;
 	}
@@ -1027,6 +1035,44 @@ static const struct media_device_ops camss_media_ops = {
 	.link_notify = v4l2_pipeline_link_notify,
 };
 
+
+static int camss_configure_pd(struct camss *camss)
+{
+	int ret;
+
+	if (camss->version == CAMSS_8x96 ||
+	    camss->version == CAMSS_SDM845) {
+		camss->genpd[PM_DOMAIN_VFE0] = dev_pm_domain_attach_by_id(camss->dev,
+									  PM_DOMAIN_VFE0);
+		if (IS_ERR(camss->genpd[PM_DOMAIN_VFE0]))
+			return PTR_ERR(camss->genpd[PM_DOMAIN_VFE0]);
+
+		camss->genpd[PM_DOMAIN_VFE1] = dev_pm_domain_attach_by_id(camss->dev,
+									  PM_DOMAIN_VFE1);
+		if (IS_ERR(camss->genpd[PM_DOMAIN_VFE1])) {
+			ret = PTR_ERR(camss->genpd[PM_DOMAIN_VFE1]);
+			goto fail_vfe0;
+		}
+	}
+
+	if (camss->version == CAMSS_SDM845) {
+		camss->genpd[PM_DOMAIN_VFELITE] = dev_pm_domain_attach_by_id(camss->dev,
+									     PM_DOMAIN_VFELITE);
+		if (IS_ERR(camss->genpd[PM_DOMAIN_VFELITE])) {
+			ret = PTR_ERR(camss->genpd[PM_DOMAIN_VFELITE]);
+			goto fail_vfe1;
+		}
+	}
+
+	return 0;
+
+fail_vfe1:
+	dev_pm_domain_detach(camss->genpd[PM_DOMAIN_VFE1], true);
+fail_vfe0:
+	dev_pm_domain_detach(camss->genpd[PM_DOMAIN_VFE0], true);
+	return ret;
+}
+
 /*
  * camss_probe - Probe CAMSS platform device
  * @pdev: Pointer to CAMSS platform device
@@ -1058,6 +1104,12 @@ static int camss_probe(struct platform_device *pdev)
 		camss->csiphy_num = 3;
 		camss->csid_num = 4;
 		camss->vfe_num = 2;
+	} else if (of_device_is_compatible(dev->of_node,
+					   "qcom,sdm845-camss")) {
+		camss->version = CAMSS_SDM845;
+		camss->csiphy_num = 4;
+		camss->csid_num = 3;
+		camss->vfe_num = 3;
 	} else {
 		ret = -EINVAL;
 		goto err_free;
@@ -1153,19 +1205,10 @@ static int camss_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (camss->version == CAMSS_8x96) {
-		camss->genpd[PM_DOMAIN_VFE0] = dev_pm_domain_attach_by_id(
-						camss->dev, PM_DOMAIN_VFE0);
-		if (IS_ERR(camss->genpd[PM_DOMAIN_VFE0]))
-			return PTR_ERR(camss->genpd[PM_DOMAIN_VFE0]);
-
-		camss->genpd[PM_DOMAIN_VFE1] = dev_pm_domain_attach_by_id(
-						camss->dev, PM_DOMAIN_VFE1);
-		if (IS_ERR(camss->genpd[PM_DOMAIN_VFE1])) {
-			dev_pm_domain_detach(camss->genpd[PM_DOMAIN_VFE0],
-					     true);
-			return PTR_ERR(camss->genpd[PM_DOMAIN_VFE1]);
-		}
+	ret = camss_configure_pd(camss);
+	if (ret < 0) {
+		dev_err(dev, "%s() camss_register_entities failed\n", __func__);
+		return ret;
 	}
 
 	pm_runtime_enable(dev);
@@ -1195,6 +1238,10 @@ void camss_delete(struct camss *camss)
 	if (camss->version == CAMSS_8x96) {
 		dev_pm_domain_detach(camss->genpd[PM_DOMAIN_VFE0], true);
 		dev_pm_domain_detach(camss->genpd[PM_DOMAIN_VFE1], true);
+	} else if (camss->version == CAMSS_SDM845) {
+		dev_pm_domain_detach(camss->genpd[PM_DOMAIN_VFE0], true);
+		dev_pm_domain_detach(camss->genpd[PM_DOMAIN_VFE1], true);
+		dev_pm_domain_detach(camss->genpd[PM_DOMAIN_VFELITE], true);
 	}
 
 	kfree(camss);
@@ -1223,6 +1270,7 @@ static int camss_remove(struct platform_device *pdev)
 static const struct of_device_id camss_dt_match[] = {
 	{ .compatible = "qcom,msm8916-camss" },
 	{ .compatible = "qcom,msm8996-camss" },
+	{ .compatible = "qcom,sdm845-camss" },
 	{ }
 };
 

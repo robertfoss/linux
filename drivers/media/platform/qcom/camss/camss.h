@@ -59,6 +59,7 @@ struct resources_ispif {
 enum pm_domain {
 	PM_DOMAIN_VFE0,
 	PM_DOMAIN_VFE1,
+	PM_DOMAIN_VFELITE,
 	PM_DOMAIN_COUNT
 };
 
