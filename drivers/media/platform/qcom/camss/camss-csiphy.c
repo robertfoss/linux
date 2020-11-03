@@ -291,9 +291,9 @@ static int csiphy_stream_on(struct csiphy_device *csiphy)
 			val &= ~0xf;
 			val |= cfg->csid_id;
 		}
-		writel_relaxed(val, csiphy->base_clk_mux);
 
 		/* Enforce reg write ordering between clk mux & lane enabling */
+		debug_writel(val, csiphy->base_clk_mux, csiphy->base_unmapped, csiphy->base);
 		wmb();
 	}
 
@@ -596,6 +596,7 @@ int msm_csiphy_subdev_init(struct camss *camss,
 	/* Memory */
 
 	r = platform_get_resource_byname(pdev, IORESOURCE_MEM, res->reg[0]);
+	csiphy->base_unmapped = r->start;
 	csiphy->base = devm_ioremap_resource(dev, r);
 	if (IS_ERR(csiphy->base)) {
 		dev_err(dev, "could not map memory\n");
