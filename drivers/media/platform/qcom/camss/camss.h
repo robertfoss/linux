@@ -65,6 +65,7 @@ enum pm_domain {
 enum camss_version {
 	CAMSS_8x16,
 	CAMSS_8x96,
+	CAMSS_SDM845,
 };
 
 struct camss {
