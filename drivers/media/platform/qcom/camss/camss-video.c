@@ -1020,6 +1020,12 @@ error_vb2_init:
 	return ret;
 }
 
+void msm_video_stop_streaming(struct camss_video *video)
+{
+	if (vb2_is_streaming(&video->vb2_q))
+		vb2_streamoff(&video->vb2_q, video->type);
+}
+
 void msm_video_unregister(struct camss_video *video)
 {
 	atomic_inc(&video->camss->ref_count);
